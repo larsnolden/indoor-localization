@@ -68,7 +68,7 @@ import java.util.List;
 
 import edu.utwente.trackingapp.databinding.ActivityMapsBinding;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, SensorEventListener {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final int REQUEST_CHECK_SETTINGS = 100;
     private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
@@ -84,25 +84,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Location mCurrentLocation;
     private boolean mRequestingLocationUpdates = false;
 
-    private Boolean RecordingIsActive = false;
     private ArrayList<LatLng> potholesCoordinates;
     private ArrayList<LatLng> routeCoordinates;
     private Polyline drawRoute;
-
-    private TextView AccelerationXText;
-    private TextView AccelerationYText;
-    private TextView AccelerationZText;
     private TextView GPSCoordinates;
-    private Button ToggleRecordButton;
-    private EditText ThresholdInput;
-
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
-
-    // accelerometer
-    List<SensorEntryData> sensorEntries = new ArrayList<SensorEntryData>();
-    private SensorManager mSensorManager;
-    private Sensor accelerometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,33 +104,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapFragment.getMapAsync(this);
 
         GPSCoordinates = findViewById(R.id.coordinatesText);
-
-        AccelerationXText = findViewById(R.id.accelerationX);
-        AccelerationYText = findViewById(R.id.accelerationY);
-        AccelerationZText = findViewById(R.id.accelerationZ);
-
-        ToggleRecordButton = findViewById(R.id.ToggleRecordButton);
-        ToggleRecordButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(RecordingIsActive) {
-                    ToggleRecordButton.setText("Start");
-                    RecordingIsActive = false;
-                }
-                else {
-                    ToggleRecordButton.setText("Stop");
-                    RecordingIsActive = true;
-                }
-            }
-        });
-
-        // Get an instance of the SensorManager
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        //  Accelerometer
-        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mSensorManager.registerListener(MapsActivity.this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
 
@@ -192,33 +152,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         token.continuePermissionRequest();
                     }
                 }).check();
-
-    }
-
-    public void onSensorChanged(SensorEvent event) {
-        // we received a sensor event. it is a good practice to check
-        // that we received the proper event
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            //Log.d("event values", String.valueOf(event.values[0]));
-
-            double x = event.values[0];
-            double y = event.values[1];
-            double z = event.values[2];
-
-            AccelerationXText.setText(String.valueOf(x));
-            AccelerationYText.setText(String.valueOf(y));
-            AccelerationZText.setText(String.valueOf(z));
-
-            if(RecordingIsActive) {
-                double latitude = mCurrentLocation.getLatitude();
-                double longitude = mCurrentLocation.getLongitude();
-                sensorEntries.add(new SensorEntryData(x, y, z, latitude, longitude));
-            }
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
     }
 
@@ -294,7 +227,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     Handler handler = new Handler();
     Runnable runnable;
     int delay = 250;
-    SensorEntryData previousAveragedSensorEntry;
 
     @Override
     protected void onResume() {
@@ -305,158 +237,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             handler.postDelayed(runnable = new Runnable() {
                 public void run() {
                     handler.postDelayed(runnable, delay);
-                    if (RecordingIsActive) {
+//                    double latitude = mCurrentLocation.getLatitude();
+//                    double longitude = mCurrentLocation.getLongitude();
 
-                        double latitude = mCurrentLocation.getLatitude();
-                        double longitude = mCurrentLocation.getLongitude();
-
-                        if (!routeCoordinates.isEmpty()) {
-                            int indexLastElement = routeCoordinates.size() - 1;
-                            if (latitude != routeCoordinates.get(indexLastElement).latitude
-                                    || longitude != routeCoordinates.get(indexLastElement).longitude) {
-                                routeCoordinates.add(new LatLng(latitude, longitude));
-                            }
-
-                            if (drawRoute != null) drawRoute.remove();
-                            PolylineOptions polylineOptions = new PolylineOptions()
-                                    .addAll(routeCoordinates);
-                            drawRoute = mMap.addPolyline(polylineOptions);
-
-                        } else {
-                            routeCoordinates.add(new LatLng(latitude, longitude));
-                        }
-
-                        SensorEntryData averagedSensorEntry = averagingSensorData(sensorEntries);
-                        Log.d("avg Z: ", String.valueOf(averagedSensorEntry.getZ()));
-                        sensorEntries = new ArrayList<SensorEntryData>();
-
-                        ThresholdInput = findViewById(R.id.threshold);
-                        float threshold = Float.parseFloat(ThresholdInput.getText().toString());
-
-                        if (previousAveragedSensorEntry == null) {
-                            previousAveragedSensorEntry = averagedSensorEntry;
-                        } else if (potentialPothole(previousAveragedSensorEntry, averagedSensorEntry, threshold)) {
-                            addPothole(averagedSensorEntry);
-                        }
-                    } else {
-                        if (drawRoute != null) drawRoute.remove();
-                        routeCoordinates.clear();
-                    }
+//                    if (!routeCoordinates.isEmpty()) {
+//                        int indexLastElement = routeCoordinates.size() - 1;
+//                        if (latitude != routeCoordinates.get(indexLastElement).latitude
+//                                || longitude != routeCoordinates.get(indexLastElement).longitude) {
+//                            routeCoordinates.add(new LatLng(latitude, longitude));
+//                        }
+//
+//                        if (drawRoute != null) drawRoute.remove();
+//                        PolylineOptions polylineOptions = new PolylineOptions()
+//                                .addAll(routeCoordinates);
+//                        drawRoute = mMap.addPolyline(polylineOptions);
+//                    }
+//                    else {
+//                        routeCoordinates.add(new LatLng(latitude, longitude));
+//                    }
                 }
             }, delay);
             super.onResume();
         }
     }
-
-    public SensorEntryData averagingSensorData(List<SensorEntryData> sensorEntries) {
-
-        double sumX = 0;
-        double sumY = 0;
-        double sumZ = 0;
-
-        for (SensorEntryData sensorEntry: sensorEntries) {
-            sumX += sensorEntry.getX();
-            sumY += sensorEntry.getY();
-            sumZ += sensorEntry.getZ();
-        }
-
-        int entriesLength = sensorEntries.size();
-        double avgX = sumX/entriesLength;
-        double avgY = sumY/entriesLength;
-        double avgZ = sumZ/entriesLength;
-
-        double latitude = mCurrentLocation.getLatitude();
-        double longitude = mCurrentLocation.getLongitude();
-
-        return new SensorEntryData(avgX, avgY, avgZ, latitude, longitude);
-    }
-
-    public boolean potentialPothole(SensorEntryData previous, SensorEntryData current, float threshold) {
-
-        double zAxisPrevious = previous.getZ();
-        double zAxisCurrent = current.getZ();
-
-        double absolute_difference = Math.abs(Math.abs(zAxisPrevious) - Math.abs(zAxisCurrent));
-        return absolute_difference > threshold;
-
-    }
-
-    private void addPothole(SensorEntryData averagedSensorEntry) {
-
-        if (potholesCoordinates == null) {
-            potholesCoordinates = new ArrayList<LatLng>();
-        }
-
-        if (!clusteringPotholes(averagedSensorEntry)) {
-            LatLng potholeCoordinatesForDrawing =
-                    new LatLng(averagedSensorEntry.getLatitude(), averagedSensorEntry.getLongitude());
-
-            System.out.println("adding pothole");
-            System.out.println("long: " + averagedSensorEntry.getLongitude());
-            System.out.println("lat: " + averagedSensorEntry.getLatitude());
-
-            potholesCoordinates.add(potholeCoordinatesForDrawing);
-
-            mMap.addMarker(new MarkerOptions()
-                    .position(potholeCoordinatesForDrawing)
-                    .title("pothole")
-                    .visible(true));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(potholeCoordinatesForDrawing, 16));
-            Toast.makeText(MapsActivity.this, "pothole detected", Toast.LENGTH_SHORT).show();
-        } else {
-            System.out.println("clustered pothole");
-            Toast.makeText(MapsActivity.this, "pothole clustered", Toast.LENGTH_SHORT).show();
-        }
-
-
-    }
-
-    private boolean clusteringPotholes(SensorEntryData averagedSensorEntry) {
-
-        if (potholesCoordinates.isEmpty()) {
-            return false;
-        }
-
-        double latitude = averagedSensorEntry.getLatitude();
-        double longitude = averagedSensorEntry.getLongitude();
-
-        for (LatLng potholeCoordinate: potholesCoordinates) {
-            if (distance(latitude, potholeCoordinate.latitude, longitude, potholeCoordinate.longitude) < 0.02) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static double distance(double lat1, double lat2, double lon1, double lon2)
-    {
-
-        // The math module contains a function
-        // named toRadians which converts from
-        // degrees to radians.
-        lon1 = Math.toRadians(lon1);
-        lon2 = Math.toRadians(lon2);
-        lat1 = Math.toRadians(lat1);
-        lat2 = Math.toRadians(lat2);
-
-        // Haversine formula
-        double dlon = lon2 - lon1;
-        double dlat = lat2 - lat1;
-        double a = Math.pow(Math.sin(dlat / 2), 2)
-                + Math.cos(lat1) * Math.cos(lat2)
-                * Math.pow(Math.sin(dlon / 2),2);
-
-        double c = 2 * Math.asin(Math.sqrt(a));
-
-        // Radius of earth in kilometers. Use 3956
-        // for miles
-        double r = 6371;
-
-        // calculate the result
-        System.out.println("Distance between potential pothole:");
-        return(c * r);
-    }
-
 
     @Override
     protected void onPause() {
