@@ -17,7 +17,7 @@ public class Reader {
 
         Database database = new Database();
 
-        File myFile = new File("/Users/radmehr/Desktop/SmartSpacesArticles/Week1/beacons-Ravelijn.xlsx");
+        File myFile = new File("TrackingApp/app/src/main/beacons-Ravelijn.xlsx");
         FileInputStream fis = new FileInputStream(myFile);
 
         // Finds the workbook instance for XLSX file
